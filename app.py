@@ -108,6 +108,27 @@ def update_user():
 
     return jsonify({'message': '회원정보가 수정되었습니다.'}), 200
 
+# 회원 탈퇴
+@app.route('/api/delete', methods=['DELETE'])
+def delete_user():
+    data = request.json
+    user_id = data.get('user_id')  # 탈퇴하려는 사용자의 _id
+
+    # 필수 입력 확인
+    if not user_id:
+        return jsonify({'message': '사용자의 고유 ID를 입력해주세요.'}), 400
+
+    # 사용자 조회 (_id로 찾기)
+    user_data = user_col.find_one({"_id": ObjectId(user_id)})
+    if not user_data:
+        return jsonify({'message': '사용자를 찾을 수 없습니다.'}), 404
+
+    # 사용자 정보 삭제
+    user_col.delete_one({"_id": ObjectId(user_id)})
+
+    return jsonify({'message': '회원 탈퇴가 완료되었습니다.'}), 200
+
+
 
 
 ############################################################## 여행지 관련
