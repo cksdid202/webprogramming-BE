@@ -3,8 +3,17 @@ from pymongo import MongoClient
 import bcrypt
 from flask_cors import CORS
 
+from flask_restx import Api, Resource
+
 app = Flask(__name__)
 CORS(app)  # CORS 허용
+
+# Swagger 설정
+api = Api(app, version='1.0', title='Travel API',
+          description='A simple API for travel destinations and reviews')
+
+# 리소스 정의: API 엔드포인트에 해당
+ns = api.namespace('Reviews', description='Operations related to reviews')
 
 # MongoDB 연결
 client = MongoClient("mongodb://localhost:27017/")
@@ -12,6 +21,35 @@ db = client["trabledb"]
 user_col = db["users"]
 dest_col = db["destinations"]  # 여행지 정보를 위한 컬렉션
 review_col = db["reviews"]  # 리뷰 정보를 위한 컬렉션
+
+initial_destinations = [
+    {"name": "경복궁", "description": "한국의 대표적인 전통 궁궐", "type": "문화, 도시"},
+    {"name": "제주도", "description": "자연과 바다가 아름다운 섬", "type": "섬, 인기, 해변, 자연"},
+    {"name": "부산 해운대", "description": "한국에서 가장 유명한 해변 중 하나", "type": "인기, 해변"},
+    {"name": "남산타워", "description": "서울 전망을 볼 수 있는 타워", "type": "인기, 자연"},
+    {"name": "부산 광안리", "description": "야경이 멋진 부산의 해변", "type": "인기, 해변"},
+    {"name": "속초", "description": "동해와 산의 조화", "type": "인기, 도시, 해변"},
+    {"name": "강릉", "description": "바다와 커피 거리로 유명한 도시", "type": "인기, 도시"},
+    {"name": "경주", "description": "역사적인 유적이 많은 도시", "type": "인기, 도시"},
+    {"name": "전주한옥마을", "description": "전통과 현대가 공존하는 공간", "type": "인기, 문화"},
+    {"name": "담양", "description": "죽녹원으로 유명한 대나무숲", "type": "자연"},
+    {"name": "춘천 남이섬", "description": "데이트 명소로 유명한 섬", "type": "인기, 섬, 자연, 문화"},
+    {"name": "여수", "description": "밤바다와 케이블카로 유명", "type": "인기, 도시, 해변"},
+    {"name": "인사동", "description": "전통 공예와 갤러리의 거리", "type": "도시, 문화"},
+    {"name": "서촌", "description": "한적한 골목 문화거리", "type": "도시, 문화"},
+    {"name": "하동", "description": "녹차밭과 자연풍경", "type": "자연"},
+    {"name": "울릉도", "description": "자연이 살아있는 섬", "type": "섬, 자연"},
+    {"name": "대구 근대골목", "description": "역사 문화 체험 골목", "type": "도시, 문화"},
+    {"name": "통영", "description": "예쁜 바닷가 마을", "type": "해변"},
+    {"name": "포항 호미곶", "description": "해돋이 명소", "type": "해변"},
+    {"name": "양양 서피비치", "description": "서핑하기 좋은 해변", "type": "인기, 해변"}
+]
+
+@app.route('/', methods=['POST']) # 홈페이지 방문
+def init_destinations():
+    dest_col.delete_many({})  # 기존 데이터 제거 (원하면)
+    dest_col.insert_many(initial_destinations)
+    return jsonify({"message": "20개 여행지 초기화 완료"}), 201
 
 
 ############################################################################### user관련 
@@ -217,6 +255,22 @@ def get_destination(dest_id):
     destination['_id'] = str(destination['_id'])
 
     return jsonify(destination), 200
+
+@app.route('/api/destinations', methods=['GET'])
+def get_destinations_by_type():
+    category = request.args.get('type')  # 예: '인기', '도시', '자연' 등
+
+    if not category:
+        return jsonify({'message': '카테고리(type)를 지정해주세요.'}), 400
+
+    # type 필드에 해당 키워드가 포함된 항목만 필터링 (정규표현식 사용)
+    matched = list(dest_col.find({"type": {"$regex": category}}))
+
+    for d in matched:
+        d['_id'] = str(d['_id'])
+
+    return jsonify(matched), 200
+
 
 
 #################################################################################### 리뷰 관련
