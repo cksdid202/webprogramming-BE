@@ -44,6 +44,9 @@ initial_destinations = [
     {"name": "포항 호미곶", "description": "해돋이 명소", "type": "해변"},
     {"name": "양양 서피비치", "description": "서핑하기 좋은 해변", "type": "인기, 해변"}
 ]
+dest_col.delete_many({})  # 기존 데이터 제거 (원하면)
+dest_col.insert_many(initial_destinations)
+############
 
 @app.route('/', methods=['POST']) # 홈페이지 방문
 def init_destinations():
